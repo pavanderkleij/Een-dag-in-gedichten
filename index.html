@@ -17,7 +17,7 @@
       --cover: #253c3c;
       --gold: #e0c79e;
       --line: #d4d4c9;
-      --poem-wash: .87; /* Hoger = lichtere laag over de JPG. */
+      --poem-wash: .22; /* Lager = JPG beter zichtbaar; 0 = geheel zichtbaar. */
       --cover-wash: .12; /* Hoger = donkerdere laag over de kaft-JPG. */
       --radius: 3px;
       --serif: Georgia, "Times New Roman", serif;
@@ -444,7 +444,21 @@
         image.src = page.image;
         image.decoding = "async";
         image.loading = page.index < 2 ? "eager" : "lazy";
-        image.addEventListener("error", () => { image.hidden = true; });
+        image.addEventListener("error", () => {
+          image.hidden = true;
+          const path = page.image.replace(/^\.\//, "");
+          const message = `Achtergrond niet geladen: ${path}. Controleer de bestandsnaam (ook hoofdletters) en de map op GitHub.`;
+          const note = element.querySelector("[data-load-note]");
+          if (note) {
+            note.textContent = [note.hidden ? "" : note.textContent, message].filter(Boolean).join(" ");
+            note.hidden = false;
+          } else {
+            const notice = byId("local-notice");
+            notice.textContent = message;
+            notice.hidden = false;
+          }
+          console.warn(message);
+        });
         if (page.index !== 0) {
           const title = element.querySelector("[data-title]");
           title.id = `poem-title-${page.number}`;
