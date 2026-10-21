@@ -153,7 +153,7 @@
     }
     .cover-edition { font-size: 9px; letter-spacing: .20em; color: #c6cfbf; }
     .cover-author { margin: 0; text-align: right; font-size: 12px; line-height: 1.6; letter-spacing: .015em; }
-    /* GEDICHTPAGINA: witruimte, eigen JPG en behoud van regels/strofen. */
+    /* GEDICHTPAGINA: witruimte, eigen PNG/JPG en behoud van regels/strofen. */
     .poem-layout {
       position: relative; height: 100%; padding: 38px 43px 29px 49px;
       display: flex; flex-direction: column;
@@ -165,8 +165,18 @@
     }
     .poem-overline::after { content: ""; width: 43px; height: 1px; background: #8d96766b; }
     .poem-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 7px; scrollbar-width: thin; scrollbar-color: #b9bdab transparent; }
-    .poem-title { margin: 0 0 29px; font: normal clamp(29px, 3.5vw, 38px)/1.18 var(--serif); letter-spacing: -.035em; overflow-wrap: anywhere; }
-    .poem-text { margin: 0; font: normal 20px/1.85 var(--serif); white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4; }
+    /* JavaScript zoekt per gedicht de grootste passende, leesbare lettergrootte.
+       Als zelfs de ondergrens niet past, blijft de tekst binnen de bladzijde scrollbaar. */
+    .poem-title {
+      margin: 0 0 29px;
+      font: normal var(--poem-title-size, 36px)/1.18 var(--serif);
+      letter-spacing: -.035em; overflow-wrap: anywhere;
+    }
+    .poem-text {
+      margin: 0;
+      font: normal var(--poem-body-size, 20px)/1.68 var(--serif);
+      white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4;
+    }
     .load-note { margin: 22px 0 5px; color: #81583c; font: 11px/1.6 var(--sans); overflow-wrap: anywhere; }
     .page-footer {
       display: flex; justify-content: space-between; align-items: center;
@@ -245,8 +255,7 @@
       .cover-author { font-size: 11px; }
       .poem-layout { padding: 28px 25px 23px 32px; }
       .poem-overline { margin-bottom: 29px; }
-      .poem-title { font-size: 30px; margin-bottom: 24px; }
-      .poem-text { font-size: 18px; line-height: 1.8; }
+      .poem-title { margin-bottom: 24px; }
       .page-footer { margin-top: 15px; padding-top: 17px; }
       .navigation { margin-top: 17px; gap: 9px; }
       .audio-bar { margin-top: 7px; padding-top: 13px; }
@@ -257,7 +266,7 @@
       .cover-layout { padding-right: 24px; padding-left: 30px; }
       .cover-author { font-size: 10px; }
       .poem-layout { padding-left: 26px; padding-right: 20px; }
-      .poem-text { font-size: 17px; }
+
       .nav-button { font-size: 10px; gap: 6px; }
       .collection-title { max-width: 125px; }
       .contents label { display: none; }
@@ -347,7 +356,7 @@
       <div class="cover-frame" aria-hidden="true"></div>
       <div class="cover-layout">
         <svg class="cover-emblem" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width=".9" aria-hidden="true"><circle cx="24" cy="18" r="10"/><path d="M5 35h38M13 40h22M24 1v3M7 10l4 2M37 12l4-2"/></svg>
-        <p class="cover-kicker" data-subtitle>Tien gedichten voor woorden en piano</p>
+        <p class="cover-kicker" data-subtitle>Gedichten voor woorden en piano</p>
         <h1 class="cover-title" id="cover-title">Een dag in gedichten</h1>
         <div class="cover-divider" aria-hidden="true"></div>
         <div class="cover-open-area">
@@ -388,8 +397,10 @@
     "use strict";
     (() => {
       // INSTELLINGEN: de bestandsnamen volgen vanzelf uit het paginanummer.
-      // Verander dus alleen de losse TXT-, JPG- en MP3-bestanden.
-      const POEM_COUNT = 10;
+      // Pas AANTAL_GEDICHTEN aan en vervang verder alleen de losse bestanden.
+      // PAS ALLEEN DIT GETAL AAN: 7, 9, 10 of een ander aantal.
+      // Kaft + precies dit aantal gedichtpagina's wordt gemaakt.
+      const AANTAL_GEDICHTEN = 10;
       const TURN_DURATION = 820;
       const DEFAULT_TITLE = "Een dag in gedichten";
       const DEFAULT_AUTHOR = "Paul van der Kleij";
@@ -411,8 +422,9 @@
       let audioState = "idle";
       let gestureStart = null;
       let pointerMoved = false;
+      let refitFrame = 0;
 
-      const pages = Array.from({ length: POEM_COUNT + 1 }, (_, index) => {
+      const pages = Array.from({ length: AANTAL_GEDICHTEN + 1 }, (_, index) => {
         const number = String(index).padStart(2, "0");
         const stem = index === 0 ? "kaft" : `gedicht-${number}`;
         return {
@@ -420,11 +432,11 @@
           number,
           stem,
           // Relatieve paden werken ook op /jouw-repository/ bij GitHub Pages.
-          image: `./afbeeldingen/${stem}.jpg`,
+          image: `./afbeeldingen/${stem}.png`, // probeer PNG eerst, daarna JPG
           text: `./gedichten/${stem}.txt`,
           music: `./muziek/${stem}.mp3`,
           title: index === 0 ? DEFAULT_TITLE : `Gedicht ${number}`,
-          subtitle: "Tien gedichten voor woorden en piano",
+          subtitle: `${AANTAL_GEDICHTEN} gedichten voor woorden en piano`,
           author: DEFAULT_AUTHOR,
           body: `Hier komt jouw gedicht.\nEen eerste regel,\neen beetje ruimte,\nen dan de stilte.\n\nVervang deze tekst\ndoor jouw eigen woorden.`,
           element: null,
@@ -441,13 +453,19 @@
         element.dataset.page = String(page.index);
         element.hidden = page.index !== 0;
         const image = element.querySelector(".page-image");
-        image.src = page.image;
         image.decoding = "async";
         image.loading = page.index < 2 ? "eager" : "lazy";
+        // PNG heeft voorrang als beide bestanden bestaan. Ontbreekt PNG,
+        // probeer dan automatisch de JPG met dezelfde basisnaam.
+        // Maak de foutmelding pas zichtbaar wanneer beide ontbreken.
         image.addEventListener("error", () => {
+          if (image.dataset.format !== "jpg") {
+            image.dataset.format = "jpg";
+            image.src = `./afbeeldingen/${page.stem}.jpg`;
+            return;
+          }
           image.hidden = true;
-          const path = page.image.replace(/^\.\//, "");
-          const message = `Achtergrond niet geladen: ${path}. Controleer de bestandsnaam (ook hoofdletters) en de map op GitHub.`;
+          const message = `Achtergrond niet geladen: afbeeldingen/${page.stem}.png of afbeeldingen/${page.stem}.jpg. Controleer bestandsnamen (ook hoofdletters) en de map op GitHub.`;
           const note = element.querySelector("[data-load-note]");
           if (note) {
             note.textContent = [note.hidden ? "" : note.textContent, message].filter(Boolean).join(" ");
@@ -459,6 +477,8 @@
           }
           console.warn(message);
         });
+        image.dataset.format = "png";
+        image.src = page.image;
         if (page.index !== 0) {
           const title = element.querySelector("[data-title]");
           title.id = `poem-title-${page.number}`;
@@ -472,12 +492,24 @@
         applyPageText(page);
       }
 
+      function toRoman(number) {
+        const digits = [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
+        let n = number;
+        let result = "";
+        for (const [value, numeral] of digits) {
+          while (n >= value) { result += numeral; n -= value; }
+        }
+        return result;
+      }
+
       function applyPageText(page) {
         const el = page.element;
         if (page.index === 0) {
           el.querySelector(".cover-title").textContent = page.title;
           el.querySelector("[data-subtitle]").textContent = page.subtitle;
           el.querySelector("[data-author]").textContent = page.author;
+          // Eindnummer op de kaft volgt het ingestelde aantal gedichten.
+          el.querySelector(".cover-edition").textContent = `I — ${toRoman(AANTAL_GEDICHTEN)}`;
           document.title = `${page.title} - ${page.author}`;
           byId("collection-title").textContent = page.title;
           book.setAttribute("aria-label", `Boek: ${page.title}`);
@@ -493,7 +525,93 @@
         page.option.textContent = page.index === 0 ? "Kaft" : `${page.number} - ${page.title}`;
       }
 
-      // 2. Lees UTF-8 tekstbestanden. Regelafbrekingen en inspringing blijven staan.
+      // 2. Automatische lettergrootte op basis van WERKELIJKE ruimte.
+      // Niet het aantal regels, maar de hoogte/breedte van het gedicht bepaalt
+      // de uitkomst. Korte gedichten worden groter, lange gedichten kleiner.
+      // Witregels, inspringing en een lange titel worden meegerekend.
+      function fitPoem(page) {
+        if (page.index === 0) return;
+        const element = page.element;
+        const scroll = element.querySelector(".poem-scroll");
+        if (!scroll) return;
+        const wasHidden = element.hidden;
+        // Verborgen bladzijden hebben geen afmetingen. Meet ze tijdelijk
+        // onzichtbaar (zonder in het scherm te knipperen of klikken te vangen).
+        if (wasHidden) {
+          element.style.visibility = "hidden";
+          element.style.pointerEvents = "none";
+          element.hidden = false;
+        }
+        try {
+          if (!scroll.clientHeight || !scroll.clientWidth) return;
+          const narrow = window.matchMedia("(max-width: 600px)").matches;
+          const veryNarrow = window.matchMedia("(max-width: 350px)").matches;
+          const minSize = narrow ? 16 : 17;
+          const maxSize = veryNarrow ? 21 : narrow ? 24 : 27;
+          const minTitle = narrow ? 23 : 27;
+          const maxTitle = narrow ? 34 : 40;
+          const setSize = size => {
+            // Ook de titel past zich aan; deze blijft groter dan de tekst.
+            const title = Math.min(maxTitle, Math.max(minTitle, size * 1.43));
+            element.style.setProperty("--poem-body-size", `${size.toFixed(2)}px`);
+            element.style.setProperty("--poem-title-size", `${title.toFixed(2)}px`);
+          };
+          const fits = () =>
+            scroll.scrollHeight <= scroll.clientHeight + 1 &&
+            scroll.scrollWidth <= scroll.clientWidth + 1;
+
+          setSize(minSize);
+          if (!fits()) {
+            // Nooit onleesbaar klein maken: de lezer kan dan scrollen.
+            element.dataset.poemFit = "scroll";
+            return;
+          }
+          setSize(maxSize);
+          if (fits()) {
+            element.dataset.poemFit = "fit";
+            return;
+          }
+          // Binaire zoekmethode: nauwkeurig tot 0,1 px in hooguit 8 metingen.
+          let low = minSize;
+          let high = maxSize;
+          for (let step = 0; step < 8; step++) {
+            const middle = (low + high) / 2;
+            setSize(middle);
+            if (fits()) low = middle;
+            else high = middle;
+          }
+          // Een kleine veiligheidsmarge voorkomt een extra scrollregel
+          // door afronding in verschillende browsers.
+          setSize(Math.max(minSize, low - 0.1));
+          element.dataset.poemFit = "fit";
+        } finally {
+          if (wasHidden) {
+            element.hidden = true;
+            element.style.visibility = "";
+            element.style.pointerEvents = "";
+          }
+        }
+      }
+
+      function requestRefit() {
+        if (refitFrame) cancelAnimationFrame(refitFrame);
+        refitFrame = requestAnimationFrame(() => {
+          refitFrame = 0;
+          fitPoem(pages[currentPage]);
+        });
+      }
+
+      // Herbereken bij draaiing van de telefoon, vensterwijzigingen en na
+      // laden van fonts. De vaste hoogte van het boek verandert mee.
+      window.addEventListener("resize", requestRefit, { passive: true });
+      if ("ResizeObserver" in window) {
+        new ResizeObserver(requestRefit).observe(book);
+      }
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(requestRefit);
+      }
+
+      // 3. Lees UTF-8 tekstbestanden. Regelafbrekingen en inspringing blijven staan.
       async function loadText(page) {
         const controller = new AbortController();
         const timeout = window.setTimeout(() => controller.abort(), 12000);
@@ -505,7 +623,13 @@
           if (!lines[0].trim()) throw new Error("De titel op de eerste regel ontbreekt.");
           page.title = lines.shift().trim();
           if (page.index === 0) {
-            page.subtitle = (lines[0] || "").trim();
+            // De originele placeholder noemt 'Tien gedichten'. Maak die
+            // automatisch passend bij AANTAL_GEDICHTEN. Een zelfgeschreven
+            // ondertitel blijft volledig behouden.
+            const coverSubtitle = (lines[0] || "").trim();
+            page.subtitle = /^Tien gedichten voor woorden en piano$/i.test(coverSubtitle)
+              ? `${AANTAL_GEDICHTEN} gedichten voor woorden en piano`
+              : coverSubtitle;
             page.author = (lines[1] || DEFAULT_AUTHOR).trim() || DEFAULT_AUTHOR;
           } else {
             while (lines.length && lines[0].trim() === "") lines.shift();
@@ -513,6 +637,7 @@
             page.body = lines.join("\n");
           }
           applyPageText(page);
+          fitPoem(page);
           page.element.dataset.loadState = "loaded";
         } catch (error) {
           // Een ontbrekend bestand maakt de bundel niet onbruikbaar.
@@ -531,7 +656,7 @@
         }
       }
 
-      // 3. Een enkele audiospeler; elke bladzijde krijgt haar eigen bestand.
+      // 4. Een enkele audiospeler; elke bladzijde krijgt haar eigen bestand.
       // play() wordt DIRECT binnen de klik aangeroepen, niet na de animatie
       // of na een fetch. Zo blijft de handeling een bewuste gebruikersklik.
       function beginTrack(index) {
@@ -619,7 +744,7 @@
       });
       window.addEventListener("pagehide", () => audio.pause());
 
-      // 4. Een dubbelzijdig vel met echte 3D-rotatie om de boekrug.
+      // 5. Een dubbelzijdig vel met echte 3D-rotatie om de boekrug.
       function makeTurningSheet(source) {
         const sheet = document.createElement("div");
         sheet.className = "turning-sheet";
@@ -654,8 +779,8 @@
         nextButton.disabled = isTurning;
         selector.disabled = isTurning;
         selector.value = String(currentPage);
-        byId("counter").textContent = currentPage === 0 ? "Kaft" : `${pages[currentPage].number} / ${POEM_COUNT}`;
-        byId("next-label").textContent = currentPage === 0 ? "Open het boek" : currentPage === POEM_COUNT ? "Terug naar de kaft" : "Volgende";
+        byId("counter").textContent = currentPage === 0 ? "Kaft" : `${pages[currentPage].number} / ${AANTAL_GEDICHTEN}`;
+        byId("next-label").textContent = currentPage === 0 ? "Open het boek" : currentPage === AANTAL_GEDICHTEN ? "Terug naar de kaft" : "Volgende";
         book.setAttribute("aria-busy", String(isTurning));
       }
 
@@ -665,13 +790,14 @@
         if (sheet) sheet.remove();
         const scroll = newElement.querySelector(".poem-scroll");
         if (scroll) scroll.scrollTop = 0;
+        fitPoem(pages[currentPage]);
         isTurning = false;
         updateNavigation();
         // Verplaats focus alleen als het element met focus net verborgen is.
         if (oldElement.contains(document.activeElement)) book.focus({ preventScroll: true });
         byId("announcement").textContent = currentPage === 0
           ? `Kaft: ${pages[0].title}.`
-          : `Gedicht ${currentPage} van ${POEM_COUNT}: ${pages[currentPage].title}.`;
+          : `Gedicht ${currentPage} van ${AANTAL_GEDICHTEN}: ${pages[currentPage].title}.`;
         // Haal de volgende achtergrond alvast op zonder alle grote JPG's te laden.
         const ahead = pages[(currentPage + 1) % pages.length].element.querySelector(".page-image");
         ahead.loading = "eager";
@@ -686,6 +812,9 @@
         direction = direction ?? (index > oldIndex ? 1 : -1);
         currentPage = index;
         isTurning = true;
+        // Bereken de tekstgrootte VOOR het omslaan, zodat de bladzijde
+        // tijdens de animatie al de juiste verhoudingen heeft.
+        fitPoem(pages[index]);
 
         beginTrack(index); // Niet uitstellen: dit hoort bij de klik van de lezer.
         updateNavigation();
@@ -768,6 +897,8 @@
 
       updateNavigation();
       updateAudioUI();
+      // Ook de ingebouwde voorbeeldteksten hebben meteen goede opmaak.
+      fitPoem(pages[1]);
       if (isLocalFile) {
         byId("local-notice").hidden = false;
         pages.forEach(page => { page.element.dataset.loadState = "preview"; });
