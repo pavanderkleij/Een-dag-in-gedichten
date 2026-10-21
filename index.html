@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#253c3c">
+  <meta name="description" content="Een dag in gedichten. Tien gedichten voor woorden en piano, van Paul van der Kleij.">
+  <title>Een dag in gedichten - Paul van der Kleij</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%23253c3c'/%3E%3Ccircle cx='32' cy='27' r='10' fill='none' stroke='%23e8d4af' stroke-width='2'/%3E%3Cpath d='M14 43h36' stroke='%23e8d4af' stroke-width='2'/%3E%3C/svg%3E">
+  <style>
+    /* VORMGEVING. Voor nieuwe inhoud hoef je hier niets te wijzigen. */
+    :root {
+      --ink: #2f3530;
+      --muted: #6c7168;
+      --table: #f0ede6;
+      --paper: #f6f2e9;
+      --cover: #253c3c;
+      --gold: #e0c79e;
+      --line: #d4d4c9;
+      --poem-wash: .87; /* Hoger = lichtere laag over de JPG. */
+      --cover-wash: .12; /* Hoger = donkerdere laag over de kaft-JPG. */
+      --radius: 3px;
+      --serif: Georgia, "Times New Roman", serif;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html { min-width: 280px; background: var(--table); }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: radial-gradient(ellipse at 50% 28%, #faf8f3 0, var(--table) 68%);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    button, select { font: inherit; }
+    button { color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    button:disabled { opacity: .36; cursor: default; }
+    button:focus-visible, select:focus-visible, a:focus-visible {
+      outline: 2px solid #5c7a70;
+      outline-offset: 5px;
+    }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0;
+      margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0);
+      white-space: nowrap; border: 0;
+    }
+    .site-header {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 25px 28px 19px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand {
+      display: flex; align-items: center; gap: 11px;
+      font-size: 10px; letter-spacing: .20em; font-weight: 500;
+    }
+    .brand svg { width: 25px; height: 25px; flex-shrink: 0; }
+    .header-note { font-size: 10px; letter-spacing: .14em; color: var(--muted); }
+    .reader { width: min(100% - 48px, 560px); margin: 23px auto 0; }
+    .reader-meta {
+      display: flex; align-items: center; justify-content: space-between;
+      min-height: 30px; gap: 14px; margin-bottom: 13px;
+    }
+    .collection-title {
+      margin: 0; font-size: 12px; font-family: var(--serif);
+      font-style: italic; color: var(--muted);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .contents { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .contents label { font-size: 10px; color: var(--muted); }
+    .contents select {
+      max-width: 160px; min-width: 68px; padding: 6px 1px;
+      font-size: 11px; border: 0; color: var(--ink);
+      border-radius: 0; background: transparent; cursor: pointer;
+    }
+    .book-stage {
+      position: relative; width: 100%;
+      height: clamp(580px, calc(100svh - 264px), 750px);
+      perspective: 2000px;
+      isolation: isolate;
+      border-radius: var(--radius);
+      outline: none;
+      touch-action: pan-y;
+      cursor: pointer;
+      background: var(--paper);
+      box-shadow: 1px 1px 0 #d0ccbf, 3px 3px 0 #f9f6ed,
+                  4px 4px 0 #d0ccbf, 6px 6px 0 #f9f6ed,
+                  7px 7px 0 #d0ccbf, 10px 14px 18px -12px #4b4b404d,
+                  0 27px 55px -19px #4a4a4040;
+    }
+    .book-stage:focus-visible { outline: 2px solid #5c7a70; outline-offset: 12px; }
+    .book-stage[aria-busy="true"] { cursor: progress; }
+    .book-page {
+      position: absolute; inset: 0; overflow: hidden;
+      border-radius: var(--radius); background: var(--paper);
+    }
+    .page-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .page-wash { position: absolute; inset: 0; background: rgb(250 247 239 / var(--poem-wash)); }
+    .book-page::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(90deg, #2c352116 0, transparent 2%, #fff5 3%, transparent 6%);
+      border: 1px solid #3b413111;
+      border-radius: inherit;
+    }
+    /* KAFT: titel bovenin, auteursnaam klein rechtsonder. */
+    .cover { background: var(--cover); color: #f8f3e8; }
+    .cover .page-wash {
+      background: linear-gradient(110deg, #081d2226, transparent 65%),
+                  rgb(9 24 24 / var(--cover-wash));
+    }
+    .cover::after {
+      background: linear-gradient(90deg, #0004 0, #0001 2%, #ffffff16 3%, transparent 6%);
+      border-color: #ffffff16;
+    }
+    .cover-frame {
+      position: absolute; inset: 21px 20px 21px 26px;
+      border: 1px solid #e0c79e59; pointer-events: none;
+    }
+    .cover-layout {
+      position: relative; height: 100%; display: flex; flex-direction: column;
+      padding: 56px 46px 45px 55px;
+    }
+    .cover-emblem { width: 47px; height: 47px; color: var(--gold); margin-bottom: 26px; }
+    .cover-kicker {
+      margin: 0 0 25px; max-width: 310px;
+      color: #ecdcc1; font-size: 10px; letter-spacing: .20em; line-height: 1.9;
+    }
+    .cover-title {
+      max-width: 440px; margin: 0;
+      font: normal clamp(49px, 6vw, 72px)/1.04 var(--serif);
+      letter-spacing: -.045em;
+      text-wrap: balance;
+    }
+    .cover-divider { width: 48px; height: 1px; background: var(--gold); margin-top: 33px; opacity: .8; }
+    .cover-open-area { margin-top: auto; padding-top: 30px; }
+    .open-book {
+      display: inline-flex; align-items: center; gap: 24px;
+      padding: 10px 0; background: none; color: #f8f3e8;
+      border: 0; border-bottom: 1px solid #e0c79e70;
+      font: 17px var(--serif);
+    }
+    .open-book:hover { border-color: var(--gold); }
+    .open-book:focus-visible { outline-color: var(--gold); }
+    .arrow-icon { width: 23px; height: 17px; flex-shrink: 0; }
+    .cover-sound-note { margin: 10px 0 0; color: #d0d9ce; font-size: 10px; line-height: 1.6; }
+    .cover-footer {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 14px; margin-top: 42px;
+    }
+    .cover-edition { font-size: 9px; letter-spacing: .20em; color: #c6cfbf; }
+    .cover-author { margin: 0; text-align: right; font-size: 12px; line-height: 1.6; letter-spacing: .015em; }
+    /* GEDICHTPAGINA: witruimte, eigen JPG en behoud van regels/strofen. */
+    .poem-layout {
+      position: relative; height: 100%; padding: 38px 43px 29px 49px;
+      display: flex; flex-direction: column;
+    }
+    .poem-overline {
+      display: flex; align-items: center; gap: 17px;
+      margin: 0 0 36px; color: #6e7468;
+      font-size: 9px; letter-spacing: .19em;
+    }
+    .poem-overline::after { content: ""; width: 43px; height: 1px; background: #8d96766b; }
+    .poem-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 7px; scrollbar-width: thin; scrollbar-color: #b9bdab transparent; }
+    .poem-title { margin: 0 0 29px; font: normal clamp(29px, 3.5vw, 38px)/1.18 var(--serif); letter-spacing: -.035em; overflow-wrap: anywhere; }
+    .poem-text { margin: 0; font: normal 20px/1.85 var(--serif); white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4; }
+    .load-note { margin: 22px 0 5px; color: #81583c; font: 11px/1.6 var(--sans); overflow-wrap: anywhere; }
+    .page-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 20px; padding-top: 21px; margin-top: 20px;
+      border-top: 1px solid #89947d38; color: #72776b;
+      font-size: 9px; letter-spacing: .06em;
+    }
+    .folio { font: 15px var(--serif); }
+    /* Een tijdelijk dubbelzijdig vel draait om de linker boekrug. */
+    .turning-sheet {
+      position: absolute; inset: 0; z-index: 20;
+      transform-origin: 0 50%; transform-style: preserve-3d;
+      pointer-events: none; will-change: transform;
+    }
+    .sheet-front, .sheet-back {
+      position: absolute; inset: 0; border-radius: var(--radius);
+      -webkit-backface-visibility: hidden; backface-visibility: hidden;
+    }
+    .sheet-front { transform: translateZ(.2px); }
+    .sheet-back {
+      transform: rotateY(180deg);
+      background: linear-gradient(90deg, #cbc7b9, #f3efe5 8%, #e6e0d3 93%, #c5c0b3);
+      border: 1px solid #c9c2b4;
+      box-shadow: 0 8px 25px #31372c26;
+    }
+    .turn-shade {
+      position: absolute; inset: 0; z-index: 4;
+      background: linear-gradient(90deg, transparent, #1020165c);
+      pointer-events: none;
+    }
+    .navigation {
+      display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+      gap: 15px; margin-top: 23px;
+    }
+    .nav-button {
+      display: flex; align-items: center; gap: 9px; width: fit-content;
+      padding: 9px 0; border: 0; background: none; font-size: 11px;
+    }
+    .nav-button.next { justify-self: end; text-align: right; }
+    .nav-button:hover:not(:disabled) { text-decoration: underline; text-underline-offset: 4px; }
+    .nav-button svg { width: 18px; height: 14px; }
+    .counter { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; letter-spacing: .08em; }
+    .audio-bar {
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; padding: 16px 0 9px; margin-top: 10px;
+      border-top: 1px solid var(--line);
+    }
+    .sound-button {
+      flex-shrink: 0; width: 38px; height: 38px; border: 1px solid #abb3a3;
+      border-radius: 50%; display: grid; place-items: center; background: #f9f7f18c;
+    }
+    .sound-button:hover { background: #fff; }
+    .sound-button svg { width: 14px; height: 14px; }
+    .audio-copy { min-width: 0; }
+    .audio-title { margin: 0 0 4px; font-size: 11px; }
+    .audio-detail { margin: 0; font-size: 10px; color: var(--muted); line-height: 1.5; overflow-wrap: anywhere; }
+    .help { text-align: center; color: var(--muted); font-size: 10px; line-height: 1.7; margin: 11px 0 25px; }
+    .notice, noscript {
+      display: block; max-width: 680px; margin: 20px auto; padding: 14px 18px;
+      background: #fff5db; border: 1px solid #d6c590; font-size: 12px; line-height: 1.65;
+    }
+    @media (max-width: 600px) {
+      .site-header { margin: 0 20px; padding: 17px 0 15px; }
+      .header-note { display: none; }
+      .reader { width: calc(100% - 40px); margin-top: 15px; }
+      .reader-meta { margin-bottom: 10px; }
+      .contents select { max-width: 128px; }
+      .book-stage { height: clamp(515px, calc(100svh - 238px), 710px); }
+      .cover-frame { inset: 15px 15px 15px 20px; }
+      .cover-layout { padding: 39px 29px 31px 37px; }
+      .cover-emblem { margin-bottom: 22px; width: 37px; height: 37px; }
+      .cover-kicker { font-size: 9px; margin-bottom: 23px; }
+      .cover-title { font-size: clamp(44px, 10.6vw, 62px); max-width: 410px; }
+      .cover-divider { margin-top: 27px; }
+      .cover-footer { margin-top: 32px; }
+      .cover-author { font-size: 11px; }
+      .poem-layout { padding: 28px 25px 23px 32px; }
+      .poem-overline { margin-bottom: 29px; }
+      .poem-title { font-size: 30px; margin-bottom: 24px; }
+      .poem-text { font-size: 18px; line-height: 1.8; }
+      .page-footer { margin-top: 15px; padding-top: 17px; }
+      .navigation { margin-top: 17px; gap: 9px; }
+      .audio-bar { margin-top: 7px; padding-top: 13px; }
+      .notice { margin: 16px 20px; }
+    }
+    @media (max-width: 350px) {
+      .reader { width: calc(100% - 30px); }
+      .cover-layout { padding-right: 24px; padding-left: 30px; }
+      .cover-author { font-size: 10px; }
+      .poem-layout { padding-left: 26px; padding-right: 20px; }
+      .poem-text { font-size: 17px; }
+      .nav-button { font-size: 10px; gap: 6px; }
+      .collection-title { max-width: 125px; }
+      .contents label { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      /* JavaScript slaat ook de omslaganimatie over bij deze voorkeur. */
+      *, *::before, *::after { scroll-behavior: auto !important; }
+    }
+    @media print {
+      body { background: white; }
+      .site-header, .reader-meta, .navigation, .audio-bar, .help, .notice { display: none; }
+      .reader { width: 100%; margin: 0; }
+      .book-stage { height: auto; box-shadow: none; perspective: none; }
+      .book-page, .book-page[hidden] { display: block !important; position: relative; min-height: 245mm; break-after: page; }
+      .poem-layout, .cover-layout { min-height: 245mm; }
+      .poem-scroll { overflow: visible; }
+      .open-book, .cover-sound-note { display: none; }
+      .turning-sheet { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="16" cy="12" r="6"/><path d="M4 24h24M16 1v2M5 7l2 1M25 7l2-1"/></svg>
+      <span>WOORDEN &amp; PIANO</span>
+    </div>
+    <span class="header-note">EEN KLEINE BUNDEL. EEN MOMENT VOOR JEZELF.</span>
+  </header>
+
+  <p id="local-notice" class="notice" hidden>
+    Je bekijkt een lokale voorvertoning. Open de site via GitHub Pages of een lokale webserver
+    om de losse .txt-bestanden in te laden. Nu zie je ingebouwde voorbeeldteksten.
+    De instructies staan in LEESMIJ.md.
+  </p>
+  <noscript>Een dag in gedichten - Paul van der Kleij. Schakel JavaScript in om de bundel te openen, de teksten te laden en de muziek af te spelen.</noscript>
+
+  <main class="reader" aria-label="Digitale dichtbundel">
+    <div class="reader-meta">
+      <p class="collection-title" id="collection-title">Een dag in gedichten</p>
+      <div class="contents">
+        <label for="page-select">Inhoud</label>
+        <select id="page-select" aria-label="Ga naar een bladzijde"></select>
+      </div>
+    </div>
+
+    <div class="book-stage" id="book" tabindex="0" role="group"
+         aria-label="Boek: Een dag in gedichten" aria-describedby="book-help" aria-busy="false">
+      <!-- JavaScript maakt hier de kaft en de tien gedichtpagina's. -->
+    </div>
+
+    <nav class="navigation" aria-label="Door het boek bladeren">
+      <button class="nav-button" id="previous" type="button" disabled>
+        <svg viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M23 8H2m6-6L2 8l6 6"/></svg>
+        <span>Vorige</span>
+      </button>
+      <span class="counter" id="counter">Kaft</span>
+      <button class="nav-button next" id="next" type="button">
+        <span id="next-label">Open het boek</span>
+        <svg viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M1 8h21m-6-6 6 6-6 6"/></svg>
+      </button>
+    </nav>
+
+    <div class="audio-bar" role="group" aria-label="Pianomuziek">
+      <button class="sound-button" id="sound-toggle" type="button" aria-label="Muziek starten">
+        <svg id="play-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5 13 8l-9 5.5z"/></svg>
+        <svg id="pause-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" hidden><path d="M3 2h3v12H3zm7 0h3v12h-3z"/></svg>
+      </button>
+      <div class="audio-copy">
+        <p class="audio-title" id="audio-title">Woorden met piano</p>
+        <p class="audio-detail" id="audio-status" role="status">De muziek start als je het boek opent.</p>
+      </div>
+    </div>
+    <p class="help" id="book-help">Klik op de bladzijde om verder te lezen.<br>Terugbladeren kan met de pijlen. Muziek pauzeren met de ronde knop.</p>
+    <p class="sr-only" id="announcement" role="status" aria-live="polite"></p>
+  </main>
+
+  <!-- Een speler voorkomt dat twee pagina's tegelijk muziek afspelen.
+       loop herhaalt het huidige MP3-bestand. Er is bewust geen autoplay
+       op de eerste paginalading: de eerste klik geeft toestemming. -->
+  <audio id="music" loop preload="none"></audio>
+
+  <template id="cover-template">
+    <article class="book-page cover" aria-labelledby="cover-title">
+      <img class="page-image" alt="" aria-hidden="true" draggable="false">
+      <div class="page-wash" aria-hidden="true"></div>
+      <div class="cover-frame" aria-hidden="true"></div>
+      <div class="cover-layout">
+        <svg class="cover-emblem" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width=".9" aria-hidden="true"><circle cx="24" cy="18" r="10"/><path d="M5 35h38M13 40h22M24 1v3M7 10l4 2M37 12l4-2"/></svg>
+        <p class="cover-kicker" data-subtitle>Tien gedichten voor woorden en piano</p>
+        <h1 class="cover-title" id="cover-title">Een dag in gedichten</h1>
+        <div class="cover-divider" aria-hidden="true"></div>
+        <div class="cover-open-area">
+          <button class="open-book" type="button" data-open-book>
+            <span>Open het boek</span>
+            <svg class="arrow-icon" viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M1 8h21m-6-6 6 6-6 6"/></svg>
+          </button>
+          <p class="cover-sound-note">Met piano, op jouw tempo.</p>
+        </div>
+        <div class="cover-footer">
+          <span class="cover-edition">I &mdash; X</span>
+          <p class="cover-author" data-author>Paul van der Kleij</p>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <template id="poem-template">
+    <article class="book-page poem-page" hidden>
+      <img class="page-image" alt="" aria-hidden="true" draggable="false">
+      <div class="page-wash" aria-hidden="true"></div>
+      <div class="poem-layout">
+        <p class="poem-overline" data-overline></p>
+        <div class="poem-scroll" tabindex="0" aria-label="Gedichttekst, indien nodig scrollen">
+          <h2 class="poem-title" data-title></h2>
+          <p class="poem-text" data-text></p>
+          <p class="load-note" data-load-note hidden></p>
+        </div>
+        <footer class="page-footer">
+          <span data-book-name>Een dag in gedichten</span>
+          <span class="folio" data-folio></span>
+        </footer>
+      </div>
+    </article>
+  </template>
+
+  <script>
+    "use strict";
+    (() => {
+      // INSTELLINGEN: de bestandsnamen volgen vanzelf uit het paginanummer.
+      // Verander dus alleen de losse TXT-, JPG- en MP3-bestanden.
+      const POEM_COUNT = 10;
+      const TURN_DURATION = 820;
+      const DEFAULT_TITLE = "Een dag in gedichten";
+      const DEFAULT_AUTHOR = "Paul van der Kleij";
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const byId = id => document.getElementById(id);
+      const book = byId("book");
+      const selector = byId("page-select");
+      const audio = byId("music");
+      const previousButton = byId("previous");
+      const nextButton = byId("next");
+      const soundButton = byId("sound-toggle");
+      const isLocalFile = location.protocol === "file:";
+
+      let currentPage = 0;
+      let isTurning = false;
+      let soundEnabled = true;
+      let activeTrack = null;
+      let playbackVersion = 0;
+      let audioState = "idle";
+      let gestureStart = null;
+      let pointerMoved = false;
+
+      const pages = Array.from({ length: POEM_COUNT + 1 }, (_, index) => {
+        const number = String(index).padStart(2, "0");
+        const stem = index === 0 ? "kaft" : `gedicht-${number}`;
+        return {
+          index,
+          number,
+          stem,
+          // Relatieve paden werken ook op /jouw-repository/ bij GitHub Pages.
+          image: `./afbeeldingen/${stem}.jpg`,
+          text: `./gedichten/${stem}.txt`,
+          music: `./muziek/${stem}.mp3`,
+          title: index === 0 ? DEFAULT_TITLE : `Gedicht ${number}`,
+          subtitle: "Tien gedichten voor woorden en piano",
+          author: DEFAULT_AUTHOR,
+          body: `Hier komt jouw gedicht.\nEen eerste regel,\neen beetje ruimte,\nen dan de stilte.\n\nVervang deze tekst\ndoor jouw eigen woorden.`,
+          element: null,
+          option: null
+        };
+      });
+
+      // 1. Bouw alle bladzijden. Alleen de actieve pagina is zichtbaar.
+      for (const page of pages) {
+        const template = byId(page.index === 0 ? "cover-template" : "poem-template");
+        const element = template.content.firstElementChild.cloneNode(true);
+        page.element = element;
+        element.id = `page-${page.index}`;
+        element.dataset.page = String(page.index);
+        element.hidden = page.index !== 0;
+        const image = element.querySelector(".page-image");
+        image.src = page.image;
+        image.decoding = "async";
+        image.loading = page.index < 2 ? "eager" : "lazy";
+        image.addEventListener("error", () => { image.hidden = true; });
+        if (page.index !== 0) {
+          const title = element.querySelector("[data-title]");
+          title.id = `poem-title-${page.number}`;
+          element.setAttribute("aria-labelledby", title.id);
+        }
+        const option = document.createElement("option");
+        option.value = String(page.index);
+        page.option = option;
+        selector.append(option);
+        book.append(element);
+        applyPageText(page);
+      }
+
+      function applyPageText(page) {
+        const el = page.element;
+        if (page.index === 0) {
+          el.querySelector(".cover-title").textContent = page.title;
+          el.querySelector("[data-subtitle]").textContent = page.subtitle;
+          el.querySelector("[data-author]").textContent = page.author;
+          document.title = `${page.title} - ${page.author}`;
+          byId("collection-title").textContent = page.title;
+          book.setAttribute("aria-label", `Boek: ${page.title}`);
+          document.querySelectorAll("[data-book-name]").forEach(node => { node.textContent = page.title; });
+        } else {
+          el.querySelector("[data-overline]").textContent = `GEDICHT ${page.number}`;
+          el.querySelector("[data-title]").textContent = page.title;
+          // textContent, niet innerHTML: een gedicht blijft gewone, veilige tekst.
+          el.querySelector("[data-text]").textContent = page.body;
+          el.querySelector("[data-folio]").textContent = page.number;
+          el.querySelector("[data-book-name]").textContent = pages[0].title;
+        }
+        page.option.textContent = page.index === 0 ? "Kaft" : `${page.number} - ${page.title}`;
+      }
+
+      // 2. Lees UTF-8 tekstbestanden. Regelafbrekingen en inspringing blijven staan.
+      async function loadText(page) {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 12000);
+        try {
+          const response = await fetch(page.text, { cache: "no-cache", signal: controller.signal });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const raw = (await response.text()).replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+          const lines = raw.split("\n");
+          if (!lines[0].trim()) throw new Error("De titel op de eerste regel ontbreekt.");
+          page.title = lines.shift().trim();
+          if (page.index === 0) {
+            page.subtitle = (lines[0] || "").trim();
+            page.author = (lines[1] || DEFAULT_AUTHOR).trim() || DEFAULT_AUTHOR;
+          } else {
+            while (lines.length && lines[0].trim() === "") lines.shift();
+            while (lines.length && lines[lines.length - 1].trim() === "") lines.pop();
+            page.body = lines.join("\n");
+          }
+          applyPageText(page);
+          page.element.dataset.loadState = "loaded";
+        } catch (error) {
+          // Een ontbrekend bestand maakt de bundel niet onbruikbaar.
+          page.element.dataset.loadState = "fallback";
+          const note = page.element.querySelector("[data-load-note]");
+          if (note) {
+            note.textContent = `Voorbeeldtekst: ${page.text.replace("./", "")} kon niet worden geladen. Controleer dit bestand.`;
+            note.hidden = false;
+          } else {
+            byId("local-notice").textContent = "De kafttekst kon niet worden geladen. De werktitel wordt getoond. Controleer gedichten/kaft.txt.";
+            byId("local-notice").hidden = false;
+          }
+          console.warn(`Tekst niet geladen: ${page.text}`, error);
+        } finally {
+          window.clearTimeout(timeout);
+        }
+      }
+
+      // 3. Een enkele audiospeler; elke bladzijde krijgt haar eigen bestand.
+      // play() wordt DIRECT binnen de klik aangeroepen, niet na de animatie
+      // of na een fetch. Zo blijft de handeling een bewuste gebruikersklik.
+      function beginTrack(index) {
+        const version = ++playbackVersion;
+        audio.pause();
+        audio.src = pages[index].music;
+        audio.loop = true;
+        activeTrack = index;
+        audio.load();
+        if (soundEnabled) {
+          requestPlayback(version);
+        } else {
+          audioState = "paused";
+          updateAudioUI();
+        }
+      }
+
+      function requestPlayback(version = ++playbackVersion) {
+        audioState = "loading";
+        updateAudioUI();
+        const promise = audio.play();
+        if (promise && typeof promise.then === "function") {
+          promise.then(() => {
+            if (version !== playbackVersion) return;
+            audioState = "playing";
+            updateAudioUI();
+          }).catch(error => {
+            if (version !== playbackVersion || error.name === "AbortError") return;
+            audioState = error.name === "NotAllowedError" ? "blocked" : "missing";
+            updateAudioUI();
+          });
+        }
+      }
+
+      function updateAudioUI() {
+        const playing = soundEnabled && ["loading", "playing"].includes(audioState);
+        byId("play-icon").toggleAttribute("hidden", playing);
+        byId("pause-icon").toggleAttribute("hidden", !playing);
+        soundButton.setAttribute("aria-label", playing ? "Muziek pauzeren" : "Muziek starten");
+        byId("audio-title").textContent = activeTrack === null
+          ? "Woorden met piano"
+          : activeTrack === 0 ? "Piano bij de kaft" : `Piano bij gedicht ${pages[activeTrack].number}`;
+        const messages = {
+          idle: "De muziek start als je het boek opent.",
+          loading: "Muziek laden...",
+          playing: "Speelt op herhaling. Klik op de knop om te pauzeren.",
+          paused: "Muziek gepauzeerd. Klik op afspelen om verder te luisteren.",
+          blocked: "Je browser vraagt om een klik op de afspeelknop.",
+          missing: `Muziek niet beschikbaar. Controleer muziek/${pages[activeTrack ?? currentPage].stem}.mp3.`
+        };
+        byId("audio-status").textContent = messages[audioState] || messages.idle;
+      }
+
+      soundButton.addEventListener("click", () => {
+        if (soundEnabled && ["loading", "playing"].includes(audioState)) {
+          soundEnabled = false;
+          ++playbackVersion;
+          audio.pause();
+          audioState = "paused";
+          updateAudioUI();
+        } else {
+          soundEnabled = true;
+          if (activeTrack !== currentPage || !audio.getAttribute("src") || audio.error) {
+            beginTrack(currentPage);
+          } else {
+            requestPlayback();
+          }
+        }
+      });
+      audio.addEventListener("error", () => {
+        if (activeTrack === null || !audio.error) return;
+        audioState = "missing";
+        updateAudioUI();
+      });
+      audio.addEventListener("pause", () => {
+        if (audio.paused && audioState === "playing") {
+          audioState = "paused";
+          updateAudioUI();
+        }
+      });
+      audio.addEventListener("playing", () => {
+        if (!soundEnabled) { audio.pause(); return; }
+        audioState = "playing";
+        updateAudioUI();
+      });
+      window.addEventListener("pagehide", () => audio.pause());
+
+      // 4. Een dubbelzijdig vel met echte 3D-rotatie om de boekrug.
+      function makeTurningSheet(source) {
+        const sheet = document.createElement("div");
+        sheet.className = "turning-sheet";
+        sheet.setAttribute("aria-hidden", "true");
+        sheet.setAttribute("inert", "");
+        const front = document.createElement("div");
+        front.className = "sheet-front";
+        const clone = source.cloneNode(true);
+        clone.hidden = false;
+        // Voorkom dubbele HTML-id's en verwijzingen in de tijdelijke kopie.
+        for (const node of [clone, ...clone.querySelectorAll("*")]) {
+          node.removeAttribute("id");
+          node.removeAttribute("aria-labelledby");
+          node.removeAttribute("aria-describedby");
+        }
+        front.append(clone);
+        const shade = document.createElement("div");
+        shade.className = "turn-shade";
+        front.append(shade);
+        const back = document.createElement("div");
+        back.className = "sheet-back";
+        sheet.append(front, back);
+        book.append(sheet);
+        const originalScroll = source.querySelector(".poem-scroll");
+        const copiedScroll = clone.querySelector(".poem-scroll");
+        if (originalScroll && copiedScroll) copiedScroll.scrollTop = originalScroll.scrollTop;
+        return { sheet, shade };
+      }
+
+      function updateNavigation() {
+        previousButton.disabled = currentPage === 0 || isTurning;
+        nextButton.disabled = isTurning;
+        selector.disabled = isTurning;
+        selector.value = String(currentPage);
+        byId("counter").textContent = currentPage === 0 ? "Kaft" : `${pages[currentPage].number} / ${POEM_COUNT}`;
+        byId("next-label").textContent = currentPage === 0 ? "Open het boek" : currentPage === POEM_COUNT ? "Terug naar de kaft" : "Volgende";
+        book.setAttribute("aria-busy", String(isTurning));
+      }
+
+      function finishTurn(oldElement, newElement, sheet) {
+        oldElement.hidden = true;
+        newElement.hidden = false;
+        if (sheet) sheet.remove();
+        const scroll = newElement.querySelector(".poem-scroll");
+        if (scroll) scroll.scrollTop = 0;
+        isTurning = false;
+        updateNavigation();
+        // Verplaats focus alleen als het element met focus net verborgen is.
+        if (oldElement.contains(document.activeElement)) book.focus({ preventScroll: true });
+        byId("announcement").textContent = currentPage === 0
+          ? `Kaft: ${pages[0].title}.`
+          : `Gedicht ${currentPage} van ${POEM_COUNT}: ${pages[currentPage].title}.`;
+        // Haal de volgende achtergrond alvast op zonder alle grote JPG's te laden.
+        const ahead = pages[(currentPage + 1) % pages.length].element.querySelector(".page-image");
+        ahead.loading = "eager";
+      }
+
+      function goToPage(index, direction) {
+        if (isTurning || index === currentPage || index < 0 || index >= pages.length) return;
+        const oldIndex = currentPage;
+        const oldElement = pages[oldIndex].element;
+        const newElement = pages[index].element;
+        const focusWasInside = oldElement.contains(document.activeElement);
+        direction = direction ?? (index > oldIndex ? 1 : -1);
+        currentPage = index;
+        isTurning = true;
+
+        beginTrack(index); // Niet uitstellen: dit hoort bij de klik van de lezer.
+        updateNavigation();
+        if (focusWasInside) book.focus({ preventScroll: true });
+
+        if (reducedMotion.matches || typeof book.animate !== "function") {
+          finishTurn(oldElement, newElement, null);
+          return;
+        }
+
+        const { sheet, shade } = makeTurningSheet(direction > 0 ? oldElement : newElement);
+        if (direction > 0) {
+          oldElement.hidden = true;
+          newElement.hidden = false;
+        }
+        const forwardFrames = [
+          { transform: "rotateY(0deg)", opacity: 1, offset: 0 },
+          { transform: "rotateY(-88deg)", opacity: 1, offset: .56 },
+          { transform: "rotateY(-151deg)", opacity: .72, offset: .90 },
+          { transform: "rotateY(-166deg)", opacity: 0, offset: 1 }
+        ];
+        const backwardFrames = [
+          { transform: "rotateY(-166deg)", opacity: 0, offset: 0 },
+          { transform: "rotateY(-151deg)", opacity: .72, offset: .10 },
+          { transform: "rotateY(-88deg)", opacity: 1, offset: .44 },
+          { transform: "rotateY(0deg)", opacity: 1, offset: 1 }
+        ];
+        const settings = { duration: TURN_DURATION, easing: "cubic-bezier(.24,.55,.25,1)", fill: "forwards" };
+        shade.animate(direction > 0 ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }], settings);
+        // Opacity op de 3D-container zelf zou het vel plat maken, waardoor
+        // de kaft gespiegeld door de achterkant heen zichtbaar kan worden.
+        const frames = direction > 0 ? forwardFrames : backwardFrames;
+        const rotationFrames = frames.map(({ transform, offset }) => ({ transform, offset }));
+        const opacityFrames = frames.map(({ opacity, offset }) => ({ opacity, offset }));
+        for (const face of sheet.querySelectorAll(".sheet-front, .sheet-back")) {
+          face.animate(opacityFrames, settings);
+        }
+        const animation = sheet.animate(rotationFrames, settings);
+        animation.finished.catch(() => {}).finally(() => finishTurn(oldElement, newElement, sheet));
+      }
+
+      function nextPage() {
+        goToPage((currentPage + 1) % pages.length, 1);
+      }
+      function previousPage() {
+        if (currentPage > 0) goToPage(currentPage - 1, -1);
+      }
+
+      nextButton.addEventListener("click", nextPage);
+      previousButton.addEventListener("click", previousPage);
+      selector.addEventListener("change", () => goToPage(Number(selector.value)));
+      book.querySelector("[data-open-book]").addEventListener("click", event => {
+        event.stopPropagation();
+        nextPage();
+      });
+
+      // Gewoon klikken slaat om. Tekst selecteren en verticaal scrollen niet.
+      book.addEventListener("pointerdown", event => {
+        gestureStart = { x: event.clientX, y: event.clientY };
+        pointerMoved = false;
+      });
+      book.addEventListener("pointermove", event => {
+        if (gestureStart && Math.hypot(event.clientX - gestureStart.x, event.clientY - gestureStart.y) > 9) pointerMoved = true;
+      });
+      book.addEventListener("pointercancel", () => { gestureStart = null; pointerMoved = true; });
+      book.addEventListener("click", event => {
+        if (event.target.closest("button, a, input, select, textarea, audio")) return;
+        if (pointerMoved || window.getSelection()?.toString().trim()) return;
+        nextPage();
+      });
+      document.addEventListener("keydown", event => {
+        if (event.altKey || event.ctrlKey || event.metaKey) return;
+        if (event.target.closest("input, textarea, select, [contenteditable='true']")) return;
+        if (event.key === "ArrowRight") { event.preventDefault(); nextPage(); }
+        if (event.key === "ArrowLeft") { event.preventDefault(); previousPage(); }
+        if ((event.key === "Enter" || event.key === " ") && document.activeElement === book) {
+          event.preventDefault(); nextPage();
+        }
+      });
+
+      updateNavigation();
+      updateAudioUI();
+      if (isLocalFile) {
+        byId("local-notice").hidden = false;
+        pages.forEach(page => { page.element.dataset.loadState = "preview"; });
+      } else {
+        pages.forEach(page => { void loadText(page); });
+      }
+    })();
+  </script>
+</body>
+</html>
