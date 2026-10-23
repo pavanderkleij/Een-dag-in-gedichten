@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#253c3c">
-  <meta name="description" content="Een dag in gedichten. Tien gedichten voor woorden en piano, van Paul van der Kleij.">
+  <meta name="description" content="Een dag in gedichten. Zeven gedichten voor woorden en piano, van Paul van der Kleij.">
   <title>Een dag in gedichten - Paul van der Kleij</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%23253c3c'/%3E%3Ccircle cx='32' cy='27' r='10' fill='none' stroke='%23e8d4af' stroke-width='2'/%3E%3Cpath d='M14 43h36' stroke='%23e8d4af' stroke-width='2'/%3E%3C/svg%3E">
   <style>
@@ -165,8 +165,8 @@
     }
     .poem-overline::after { content: ""; width: 43px; height: 1px; background: #8d96766b; }
     .poem-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 7px; scrollbar-width: thin; scrollbar-color: #b9bdab transparent; }
-    /* JavaScript zoekt per gedicht de grootste passende, leesbare lettergrootte.
-       Als zelfs de ondergrens niet past, blijft de tekst binnen de bladzijde scrollbaar. */
+    /* De lettergrootte staat nu PER GEDICHT vast in het JavaScript.
+       Langere teksten blijven leesbaar doordat het gedicht kan scrollen. */
     .poem-title {
       margin: 0 0 29px;
       font: normal var(--poem-title-size, 36px)/1.18 var(--serif);
@@ -292,9 +292,9 @@
   <header class="site-header">
     <div class="brand">
       <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="16" cy="12" r="6"/><path d="M4 24h24M16 1v2M5 7l2 1M25 7l2-1"/></svg>
-      <span>WOORDEN &amp; MUZIEK</span>
+      <span>WOORDEN &amp; PIANO</span>
     </div>
-    <span class="header-note">Ideetjes door de dag heen</span>
+    <span class="header-note">EEN KLEINE BUNDEL. EEN MOMENT VOOR JEZELF.</span>
   </header>
 
   <p id="local-notice" class="notice" hidden>
@@ -315,7 +315,7 @@
 
     <div class="book-stage" id="book" tabindex="0" role="group"
          aria-label="Boek: Een dag in gedichten" aria-describedby="book-help" aria-busy="false">
-      <!-- JavaScript maakt hier de kaft en de tien gedichtpagina's. -->
+      <!-- JavaScript maakt hier de kaft en zeven gedichtpagina's. -->
     </div>
 
     <nav class="navigation" aria-label="Door het boek bladeren">
@@ -396,11 +396,34 @@
   <script>
     "use strict";
     (() => {
-      // INSTELLINGEN: de bestandsnamen volgen vanzelf uit het paginanummer.
-      // Pas AANTAL_GEDICHTEN aan en vervang verder alleen de losse bestanden.
-      // PAS ALLEEN DIT GETAL AAN: 7, 9, 10 of een ander aantal.
-      // Kaft + precies dit aantal gedichtpagina's wordt gemaakt.
-      const AANTAL_GEDICHTEN = 7;
+      // ================================================================
+      // LETTERGROOTTE PER GEDICHT - PAS HIER DE ZEVEN GETALLEN AAN.
+      // De getallen zijn in pixels (px), bijv. 24, 26 of 30.
+      // Startwaarde 26 px: ongeveer de grootte van de vorige automatische
+      // versie op een desktopscherm met de meegeleverde voorbeeldteksten.
+      // Let op: op telefoons blijft hetzelfde getal gelden. Een lang
+      // gedicht kan daarom binnen de bladzijde scrollen.
+      // ================================================================
+      const LETTERGROOTTE_GEDICHT_1 = 26;
+      const LETTERGROOTTE_GEDICHT_2 = 26;
+      const LETTERGROOTTE_GEDICHT_3 = 26;
+      const LETTERGROOTTE_GEDICHT_4 = 26;
+      const LETTERGROOTTE_GEDICHT_5 = 26;
+      const LETTERGROOTTE_GEDICHT_6 = 26;
+      const LETTERGROOTTE_GEDICHT_7 = 26;
+      // ================================================================
+
+      const AANTAL_GEDICHTEN = 7; // Dit staat vast op zeven gedichten.
+      const LETTERGROOTTES = [
+        null, // pagina 0 is de kaft en heeft een eigen, vaste opmaak
+        LETTERGROOTTE_GEDICHT_1,
+        LETTERGROOTTE_GEDICHT_2,
+        LETTERGROOTTE_GEDICHT_3,
+        LETTERGROOTTE_GEDICHT_4,
+        LETTERGROOTTE_GEDICHT_5,
+        LETTERGROOTTE_GEDICHT_6,
+        LETTERGROOTTE_GEDICHT_7
+      ];
       const TURN_DURATION = 820;
       const DEFAULT_TITLE = "Een dag in gedichten";
       const DEFAULT_AUTHOR = "Paul van der Kleij";
@@ -422,7 +445,6 @@
       let audioState = "idle";
       let gestureStart = null;
       let pointerMoved = false;
-      let refitFrame = 0;
 
       const pages = Array.from({ length: AANTAL_GEDICHTEN + 1 }, (_, index) => {
         const number = String(index).padStart(2, "0");
@@ -525,90 +547,18 @@
         page.option.textContent = page.index === 0 ? "Kaft" : `${page.number} - ${page.title}`;
       }
 
-      // 2. Automatische lettergrootte op basis van WERKELIJKE ruimte.
-      // Niet het aantal regels, maar de hoogte/breedte van het gedicht bepaalt
-      // de uitkomst. Korte gedichten worden groter, lange gedichten kleiner.
-      // Witregels, inspringing en een lange titel worden meegerekend.
-      function fitPoem(page) {
-        if (page.index === 0) return;
-        const element = page.element;
-        const scroll = element.querySelector(".poem-scroll");
-        if (!scroll) return;
-        const wasHidden = element.hidden;
-        // Verborgen bladzijden hebben geen afmetingen. Meet ze tijdelijk
-        // onzichtbaar (zonder in het scherm te knipperen of klikken te vangen).
-        if (wasHidden) {
-          element.style.visibility = "hidden";
-          element.style.pointerEvents = "none";
-          element.hidden = false;
+      // 2. Pas de handmatig ingestelde lettergrootte per gedicht toe.
+      // De titel groeit proportioneel mee; er vindt geen automatische
+      // berekening van beschikbare ruimte of lengte van het gedicht plaats.
+      function applyPoemFontSize(page) {
+        if (page.index === 0) return; // Kaft behoudt eigen typografie.
+        const pixels = LETTERGROOTTES[page.index];
+        if (!Number.isFinite(pixels) || pixels <= 0) {
+          console.warn(`Ongeldige lettergrootte voor gedicht ${page.number}: ${pixels}`);
+          return;
         }
-        try {
-          if (!scroll.clientHeight || !scroll.clientWidth) return;
-          const narrow = window.matchMedia("(max-width: 600px)").matches;
-          const veryNarrow = window.matchMedia("(max-width: 350px)").matches;
-          const minSize = narrow ? 16 : 17;
-          const maxSize = veryNarrow ? 21 : narrow ? 24 : 27;
-          const minTitle = narrow ? 23 : 27;
-          const maxTitle = narrow ? 34 : 40;
-          const setSize = size => {
-            // Ook de titel past zich aan; deze blijft groter dan de tekst.
-            const title = Math.min(maxTitle, Math.max(minTitle, size * 1.43));
-            element.style.setProperty("--poem-body-size", `${size.toFixed(2)}px`);
-            element.style.setProperty("--poem-title-size", `${title.toFixed(2)}px`);
-          };
-          const fits = () =>
-            scroll.scrollHeight <= scroll.clientHeight + 1 &&
-            scroll.scrollWidth <= scroll.clientWidth + 1;
-
-          setSize(minSize);
-          if (!fits()) {
-            // Nooit onleesbaar klein maken: de lezer kan dan scrollen.
-            element.dataset.poemFit = "scroll";
-            return;
-          }
-          setSize(maxSize);
-          if (fits()) {
-            element.dataset.poemFit = "fit";
-            return;
-          }
-          // Binaire zoekmethode: nauwkeurig tot 0,1 px in hooguit 8 metingen.
-          let low = minSize;
-          let high = maxSize;
-          for (let step = 0; step < 8; step++) {
-            const middle = (low + high) / 2;
-            setSize(middle);
-            if (fits()) low = middle;
-            else high = middle;
-          }
-          // Een kleine veiligheidsmarge voorkomt een extra scrollregel
-          // door afronding in verschillende browsers.
-          setSize(Math.max(minSize, low - 0.1));
-          element.dataset.poemFit = "fit";
-        } finally {
-          if (wasHidden) {
-            element.hidden = true;
-            element.style.visibility = "";
-            element.style.pointerEvents = "";
-          }
-        }
-      }
-
-      function requestRefit() {
-        if (refitFrame) cancelAnimationFrame(refitFrame);
-        refitFrame = requestAnimationFrame(() => {
-          refitFrame = 0;
-          fitPoem(pages[currentPage]);
-        });
-      }
-
-      // Herbereken bij draaiing van de telefoon, vensterwijzigingen en na
-      // laden van fonts. De vaste hoogte van het boek verandert mee.
-      window.addEventListener("resize", requestRefit, { passive: true });
-      if ("ResizeObserver" in window) {
-        new ResizeObserver(requestRefit).observe(book);
-      }
-      if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(requestRefit);
+        page.element.style.setProperty("--poem-body-size", `${pixels}px`);
+        page.element.style.setProperty("--poem-title-size", `${(pixels * 1.43).toFixed(2)}px`);
       }
 
       // 3. Lees UTF-8 tekstbestanden. Regelafbrekingen en inspringing blijven staan.
@@ -637,7 +587,7 @@
             page.body = lines.join("\n");
           }
           applyPageText(page);
-          fitPoem(page);
+          applyPoemFontSize(page);
           page.element.dataset.loadState = "loaded";
         } catch (error) {
           // Een ontbrekend bestand maakt de bundel niet onbruikbaar.
@@ -790,7 +740,7 @@
         if (sheet) sheet.remove();
         const scroll = newElement.querySelector(".poem-scroll");
         if (scroll) scroll.scrollTop = 0;
-        fitPoem(pages[currentPage]);
+        applyPoemFontSize(pages[currentPage]);
         isTurning = false;
         updateNavigation();
         // Verplaats focus alleen als het element met focus net verborgen is.
@@ -812,9 +762,8 @@
         direction = direction ?? (index > oldIndex ? 1 : -1);
         currentPage = index;
         isTurning = true;
-        // Bereken de tekstgrootte VOOR het omslaan, zodat de bladzijde
-        // tijdens de animatie al de juiste verhoudingen heeft.
-        fitPoem(pages[index]);
+        // Zet de gekozen vaste tekstgrootte alvast klaar voor het omslaan.
+        applyPoemFontSize(pages[index]);
 
         beginTrack(index); // Niet uitstellen: dit hoort bij de klik van de lezer.
         updateNavigation();
@@ -897,8 +846,8 @@
 
       updateNavigation();
       updateAudioUI();
-      // Ook de ingebouwde voorbeeldteksten hebben meteen goede opmaak.
-      fitPoem(pages[1]);
+      // Elke gedichtpagina krijgt de eigen vaste lettergrootte.
+      pages.slice(1).forEach(applyPoemFontSize);
       if (isLocalFile) {
         byId("local-notice").hidden = false;
         pages.forEach(page => { page.element.dataset.loadState = "preview"; });
