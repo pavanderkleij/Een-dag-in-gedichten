@@ -152,7 +152,11 @@
       gap: 14px; margin-top: 42px;
     }
     .cover-edition { font-size: 9px; letter-spacing: .20em; color: #c6cfbf; }
-    .cover-author { margin: 0; text-align: right; font-size: 12px; line-height: 1.6; letter-spacing: .015em; }
+    .cover-author {
+      margin: 0; text-align: right; font-size: 11px;
+      line-height: 1.6; letter-spacing: .015em;
+      white-space: pre-line; /* Laat de drie credits elk op een eigen regel staan. */
+    }
     /* GEDICHTPAGINA: witruimte, eigen PNG/JPG en behoud van regels/strofen. */
     .poem-layout {
       position: relative; height: 100%; padding: 38px 43px 29px 49px;
@@ -337,17 +341,17 @@
       </button>
       <div class="audio-copy">
         <p class="audio-title" id="audio-title">Woorden met piano</p>
-        <p class="audio-detail" id="audio-status" role="status">De muziek start als je het boek opent.</p>
+        <p class="audio-detail" id="audio-status" role="status">De kaftmuziek start automatisch als je browser dit toestaat.</p>
       </div>
     </div>
     <p class="help" id="book-help">Klik op de bladzijde om verder te lezen.<br>Terugbladeren kan met de pijlen. Muziek pauzeren met de ronde knop.</p>
     <p class="sr-only" id="announcement" role="status" aria-live="polite"></p>
   </main>
 
-  <!-- Een speler voorkomt dat twee pagina's tegelijk muziek afspelen.
-       loop herhaalt het huidige MP3-bestand. Er is bewust geen autoplay
-       op de eerste paginalading: de eerste klik geeft toestemming. -->
-  <audio id="music" loop preload="none"></audio>
+  <!-- De MP3 van de kaft wordt direct gestart zodra de website opent.
+       Browsers kunnen autoplay met geluid blokkeren. In dat geval blijft
+       de afspeelknop beschikbaar; loop herhaalt de huidige MP3. -->
+  <audio id="music" autoplay loop preload="auto"></audio>
 
   <template id="cover-template">
     <article class="book-page cover" aria-labelledby="cover-title">
@@ -356,19 +360,19 @@
       <div class="cover-frame" aria-hidden="true"></div>
       <div class="cover-layout">
         <svg class="cover-emblem" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width=".9" aria-hidden="true"><circle cx="24" cy="18" r="10"/><path d="M5 35h38M13 40h22M24 1v3M7 10l4 2M37 12l4-2"/></svg>
-        <p class="cover-kicker" data-subtitle>Gedichten voor woorden en piano</p>
-        <h1 class="cover-title" id="cover-title">Een dag in gedichten</h1>
+        <p class="cover-kicker" data-subtitle></p>
+        <h1 class="cover-title" id="cover-title"></h1>
         <div class="cover-divider" aria-hidden="true"></div>
         <div class="cover-open-area">
           <button class="open-book" type="button" data-open-book>
-            <span>Open het boek</span>
+            <span data-cover-button></span>
             <svg class="arrow-icon" viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M1 8h21m-6-6 6 6-6 6"/></svg>
           </button>
-          <p class="cover-sound-note">Met piano, op jouw tempo.</p>
+          <p class="cover-sound-note" data-cover-note></p>
         </div>
         <div class="cover-footer">
-          <span class="cover-edition">I &mdash; X</span>
-          <p class="cover-author" data-author>Paul van der Kleij</p>
+          <span class="cover-edition" data-cover-edition></span>
+          <p class="cover-author" data-cover-credits></p>
         </div>
       </div>
     </article>
@@ -404,12 +408,12 @@
       // Let op: op telefoons blijft hetzelfde getal gelden. Een lang
       // gedicht kan daarom binnen de bladzijde scrollen.
       // ================================================================
-      const LETTERGROOTTE_GEDICHT_1 = 16;
-      const LETTERGROOTTE_GEDICHT_2 = 16;
+      const LETTERGROOTTE_GEDICHT_1 = 14;
+      const LETTERGROOTTE_GEDICHT_2 = 14;
       const LETTERGROOTTE_GEDICHT_3 = 14;
       const LETTERGROOTTE_GEDICHT_4 = 14;
-      const LETTERGROOTTE_GEDICHT_5 = 16;
-      const LETTERGROOTTE_GEDICHT_6 = 16;
+      const LETTERGROOTTE_GEDICHT_5 = 14;
+      const LETTERGROOTTE_GEDICHT_6 = 14;
       const LETTERGROOTTE_GEDICHT_7 = 14;
       // ================================================================
 
@@ -426,7 +430,19 @@
       ];
       const TURN_DURATION = 820;
       const DEFAULT_TITLE = "Een dag in gedichten";
-      const DEFAULT_AUTHOR = "Paul van der Kleij";
+      // Alleen als het kaftbestand ontbreekt of nog de oude indeling heeft,
+      // worden deze standaardteksten als veilige terugval gebruikt.
+      const DEFAULT_COVER = {
+        subtitle: "Zeven gedichten voor woorden en piano",
+        button: "Open het boek",
+        note: "Met piano, op jouw tempo.",
+        edition: "I — VII",
+        credits: [
+          "Woorden: Paul van der Kleij",
+          "Muziek: Paul van der Kleij",
+          "Illustraties: Lisa Elsinga"
+        ]
+      };
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
       const byId = id => document.getElementById(id);
       const book = byId("book");
@@ -458,8 +474,11 @@
           text: `./gedichten/${stem}.txt`,
           music: `./muziek/${stem}.mp3`,
           title: index === 0 ? DEFAULT_TITLE : `Gedicht ${number}`,
-          subtitle: `${AANTAL_GEDICHTEN} gedichten voor woorden en piano`,
-          author: DEFAULT_AUTHOR,
+          subtitle: DEFAULT_COVER.subtitle,
+          coverButton: DEFAULT_COVER.button,
+          coverNote: DEFAULT_COVER.note,
+          coverEdition: DEFAULT_COVER.edition,
+          coverCredits: [...DEFAULT_COVER.credits],
           body: `Hier komt jouw gedicht.\nEen eerste regel,\neen beetje ruimte,\nen dan de stilte.\n\nVervang deze tekst\ndoor jouw eigen woorden.`,
           element: null,
           option: null
@@ -514,25 +533,19 @@
         applyPageText(page);
       }
 
-      function toRoman(number) {
-        const digits = [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
-        let n = number;
-        let result = "";
-        for (const [value, numeral] of digits) {
-          while (n >= value) { result += numeral; n -= value; }
-        }
-        return result;
-      }
-
       function applyPageText(page) {
         const el = page.element;
         if (page.index === 0) {
           el.querySelector(".cover-title").textContent = page.title;
           el.querySelector("[data-subtitle]").textContent = page.subtitle;
-          el.querySelector("[data-author]").textContent = page.author;
-          // Eindnummer op de kaft volgt het ingestelde aantal gedichten.
-          el.querySelector(".cover-edition").textContent = `I — ${toRoman(AANTAL_GEDICHTEN)}`;
-          document.title = `${page.title} - ${page.author}`;
+          el.querySelector("[data-cover-button]").textContent = page.coverButton;
+          el.querySelector("[data-cover-note]").textContent = page.coverNote;
+          el.querySelector("[data-cover-edition]").textContent = page.coverEdition;
+          // textContent (niet innerHTML) houdt alle regels veilig bewerkbaar.
+          el.querySelector("[data-cover-credits]").textContent = page.coverCredits.join("\n");
+          document.title = page.title;
+          // Ook de navigatieknop buiten de kaft volgt de tekst uit kaft.txt.
+          if (currentPage === 0) byId("next-label").textContent = page.coverButton;
           byId("collection-title").textContent = page.title;
           book.setAttribute("aria-label", `Boek: ${page.title}`);
           document.querySelectorAll("[data-book-name]").forEach(node => { node.textContent = page.title; });
@@ -573,14 +586,33 @@
           if (!lines[0].trim()) throw new Error("De titel op de eerste regel ontbreekt.");
           page.title = lines.shift().trim();
           if (page.index === 0) {
-            // De originele placeholder noemt 'Tien gedichten'. Maak die
-            // automatisch passend bij AANTAL_GEDICHTEN. Een zelfgeschreven
-            // ondertitel blijft volledig behouden.
-            const coverSubtitle = (lines[0] || "").trim();
-            page.subtitle = /^Tien gedichten voor woorden en piano$/i.test(coverSubtitle)
-              ? `${AANTAL_GEDICHTEN} gedichten voor woorden en piano`
-              : coverSubtitle;
-            page.author = (lines[1] || DEFAULT_AUTHOR).trim() || DEFAULT_AUTHOR;
+            // KAFT.TXT: iedere zichtbare tekst heeft een eigen regel:
+            // 1 titel, 2 ondertitel, 3 knop, 4 toelichting, 5 editie,
+            // 6 Woorden, 7 Muziek, 8 Illustraties.
+            // Oude kaft.txt met 3 regels blijft leesbaar als terugval,
+            // maar vervang die bij voorkeur door de meegeleverde 8 regels.
+            const coverLines = [page.title, ...lines].map(line => line.trim());
+            if (coverLines.length >= 8 && coverLines.slice(0, 8).every(Boolean)) {
+              page.subtitle = coverLines[1];
+              page.coverButton = coverLines[2];
+              page.coverNote = coverLines[3];
+              page.coverEdition = coverLines[4];
+              page.coverCredits = coverLines.slice(5, 8);
+            } else {
+              const oldSubtitle = (coverLines[1] || "").trim();
+              page.subtitle = /^Tien gedichten voor woorden en piano$/i.test(oldSubtitle)
+                ? DEFAULT_COVER.subtitle
+                : oldSubtitle || DEFAULT_COVER.subtitle;
+              const oldAuthor = (coverLines[2] || "").trim();
+              if (oldAuthor && !oldAuthor.includes(":")) {
+                page.coverCredits = [
+                  `Woorden: ${oldAuthor}`,
+                  `Muziek: ${oldAuthor}`,
+                  DEFAULT_COVER.credits[2]
+                ];
+              }
+              console.info("Werk gedichten/kaft.txt bij naar de nieuwe indeling met 8 regels.");
+            }
           } else {
             while (lines.length && lines[0].trim() === "") lines.shift();
             while (lines.length && lines[lines.length - 1].trim() === "") lines.pop();
@@ -650,7 +682,7 @@
           ? "Woorden met piano"
           : activeTrack === 0 ? "Piano bij de kaft" : `Piano bij gedicht ${pages[activeTrack].number}`;
         const messages = {
-          idle: "De muziek start als je het boek opent.",
+          idle: "De kaftmuziek start automatisch, als je browser dit toestaat.",
           loading: "Muziek laden...",
           playing: "Speelt op herhaling. Klik op de knop om te pauzeren.",
           paused: "Muziek gepauzeerd. Klik op afspelen om verder te luisteren.",
@@ -730,7 +762,7 @@
         selector.disabled = isTurning;
         selector.value = String(currentPage);
         byId("counter").textContent = currentPage === 0 ? "Kaft" : `${pages[currentPage].number} / ${AANTAL_GEDICHTEN}`;
-        byId("next-label").textContent = currentPage === 0 ? "Open het boek" : currentPage === AANTAL_GEDICHTEN ? "Terug naar de kaft" : "Volgende";
+        byId("next-label").textContent = currentPage === 0 ? pages[0].coverButton : currentPage === AANTAL_GEDICHTEN ? "Terug naar de kaft" : "Volgende";
         book.setAttribute("aria-busy", String(isTurning));
       }
 
@@ -845,7 +877,10 @@
       });
 
       updateNavigation();
-      updateAudioUI();
+      // Probeer de kaftmuziek direct tijdens het laden van de website.
+      // Veel browsers blokkeren dit bij het eerste bezoek; de bestaande
+      // afspeelknop toont dan wat de lezer moet doen en werkt na een klik.
+      beginTrack(0);
       // Elke gedichtpagina krijgt de eigen vaste lettergrootte.
       pages.slice(1).forEach(applyPoemFontSize);
       if (isLocalFile) {
